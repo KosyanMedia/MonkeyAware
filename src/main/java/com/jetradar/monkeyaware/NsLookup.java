@@ -9,7 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class NsLookup {
-    private static final String DNS_LIST = "http://public-dns.info/nameserver/ru.txt";
+//    private static final String DNS_LIST = "http://public-dns.info/nameserver/ru.txt";
     private static final String[] DNS = new String[]{"77.88.8.8", "77.88.8.1", "8.8.8.8", "8.8.4.4"}; // yandex & google
     private static final List<ExtendedResolver> dnsResolvers;
     static {

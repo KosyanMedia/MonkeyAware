@@ -14,11 +14,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.commons.lang.StringEscapeUtils.unescapeJava;
-
 public class MonkeyAware {
     private static final String BLOCKED_HOSTS_URL = "https://raw.githubusercontent.com/zapret-info/z-i/master/dump.csv";
-    private static final String QS = "\"";
 
     private static void readBlocked(Handler handler) throws IOException {
         HttpsURLConnection conn = (HttpsURLConnection) new URL(BLOCKED_HOSTS_URL).openConnection();
