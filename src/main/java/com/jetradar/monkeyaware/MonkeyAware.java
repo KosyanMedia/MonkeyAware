@@ -9,9 +9,9 @@ import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.commons.lang.StringEscapeUtils.unescapeJava;
 
@@ -132,8 +132,10 @@ public class MonkeyAware {
     private static List<String> getColumnValues(String csvFile, int column) throws IOException {
         List<String> result = new ArrayList<>();
         Reader in = new FileReader(csvFile);
-        Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(in);
-        for (CSVRecord record : records) {
+        Iterator<CSVRecord> records = CSVFormat.RFC4180.parse(in).iterator();
+        records.next(); // skip header
+        while (records.hasNext()){
+            CSVRecord record = records.next();
             if (column < record.size() && !record.get(column).trim().isEmpty()) {
                 result.add(record.get(column));
             }
@@ -144,10 +146,10 @@ public class MonkeyAware {
     public static void main(String... args) {
         try {
             if (args.length < 2) {
-                System.out.println("use com.jetradar.monkeyaware.MonkeyAware \\mode=[trigger|report] path/to/file.csv");
+                System.out.println("use com.jetradar.monkeyaware.MonkeyAware mode=[trigger|report] path/to/file.csv");
                 System.exit(1);
             }
-            boolean isTriggerMode = args[0].equals("\\mode=trigger");
+            boolean isTriggerMode = args[0].equals("mode=trigger");
 
             StringBuilder file = new StringBuilder();
             for (int i = 1; i < args.length; i++) file.append(args[i]);
