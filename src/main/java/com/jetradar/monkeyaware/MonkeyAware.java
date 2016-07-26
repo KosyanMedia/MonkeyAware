@@ -64,8 +64,9 @@ public class MonkeyAware {
 
     private static boolean testHosts(List<String> hostList, String[] hosts) {
         for (String host : hosts) {
+            host = host.trim();
             for (String domain : hostList)
-                if (host.contains(domain))
+                if (host.equals(domain.trim()))
                     return true;
         }
         return false;
