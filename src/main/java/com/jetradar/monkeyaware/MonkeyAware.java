@@ -7,6 +7,7 @@ import org.apache.commons.net.util.SubnetUtils;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -16,22 +17,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.apache.commons.lang.StringEscapeUtils.unescapeJava;
 
 public class MonkeyAware {
-    private static final String BLOCKED_HOSTS_URL = "https://reestr.rublacklist.net/api/current";
+    private static final String BLOCKED_HOSTS_URL = "https://raw.githubusercontent.com/zapret-info/z-i/master/dump.csv";
     private static final String QS = "\"";
 
-    private static LineNumberReader getBlocked() throws IOException {
+    private static void readBlocked(Handler handler) throws IOException {
         HttpsURLConnection conn = (HttpsURLConnection) new URL(BLOCKED_HOSTS_URL).openConnection();
         conn.setRequestMethod("GET");
-        LineNumberReader lnr = new LineNumberReader(new InputStreamReader(conn.getInputStream()));
-        StringBuilder result = new StringBuilder();
-        String line = lnr.readLine();
-        while (line != null) {
-            result.append(line).append("\n");
-            line = lnr.readLine();
-        }
-        lnr.close();
 
-        return new LineNumberReader(new StringReader(unescapeJava(result.toString())));
+        Iterable<CSVRecord> records = CSVFormat.RFC4180.withDelimiter(';')
+                .parse(new InputStreamReader(conn.getInputStream(),
+                Charset.forName("windows-1251")));
+        for(CSVRecord record : records){
+            if (record.size() == 6) {
+                handler.handle(toArray(record.get(0)),
+                        toArray(record.get(1)),
+                        toArray(record.get(2)),
+                        record.get(3),
+                        record.get(4),
+                        record.get(5));
+            }
+        }
     }
 
     private static String[] toArray(String list) {
@@ -41,47 +46,6 @@ public class MonkeyAware {
             if (!i.equals("|"))
                 split.add(i);
         return split.toArray(new String[split.size()]);
-    }
-
-    private static void readBlocked(Handler handler) throws IOException {
-        LineNumberReader lnr = getBlocked();
-        String line = lnr.readLine(), t;
-        String[] tmp;
-        List<String> split;
-        while (line != null) {
-            tmp = line.split(";");
-            split = new ArrayList<>();
-            t = "";
-            for (String s : tmp) {
-                if (t.startsWith(QS)) {
-                    t = t + ";" + s;
-                    if (s.endsWith(QS)) {
-                        t = t.substring(1, t.length() - 1);
-                        split.add(t);
-                        t = "";
-                    }
-                } else if (s.startsWith(QS)) {
-                    if (s.endsWith(QS) && s.length() > 1)
-                        split.add(s.substring(1, s.length() - 1));
-                    else
-                        t = s;
-                } else {
-                    split.add(s);
-                }
-            }
-
-
-            if (split.size() == 6) {
-                handler.handle(toArray(split.get(0)),
-                        toArray(split.get(1)),
-                        toArray(split.get(2)),
-                        split.get(3),
-                        split.get(4),
-                        split.get(5));
-            }
-            line = lnr.readLine();
-        }
-        lnr.close();
     }
 
     private static void report(String[] ips, String[] hosts, String[] pages, String who, String act, String date) {
