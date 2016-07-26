@@ -1,18 +1,17 @@
 package com.jetradar.monkeyaware;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.net.util.SubnetUtils;
-import org.xbill.DNS.TextParseException;
 
 import javax.net.ssl.HttpsURLConnection;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
-import java.io.StringReader;
+import java.io.*;
 import java.net.URL;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.commons.lang.StringEscapeUtils.unescapeJava;
 
@@ -111,35 +110,75 @@ public class MonkeyAware {
         return false;
     }
 
-    private static List<IpTester> loadIpList(List<String> hostList) throws TextParseException, UnknownHostException {
-        String[] ipList = new String[]{"88.85.75.165", "185.105.163.0/24", "31.192.117.0/24"};
-
+    private static List<IpTester> loadIpList(String csvFile) throws IOException {
         List<IpTester> list = new ArrayList<>();
-        for (String ip : ipList) {
+        for (String ip : getColumnValues(csvFile, 0)) {
             list.add(new IpTester(ip));
         }
 
-        for(String host : hostList){
+        for (String host : getColumnValues(csvFile, 1)) {
             List<String> hostIpList = NsLookup.getHostsList(host);
-            for(String hostIp : hostIpList)
+            for (String hostIp : hostIpList)
                 list.add(new IpTester(hostIp));
         }
 
         return list;
     }
 
-    private static List<String> loadHostList() {
-        return Arrays.asList("aviasales.ru", "jetradar.com", "pornhub.com");
+    private static List<String> loadHostList(String csvFile) throws IOException {
+        return getColumnValues(csvFile, 1);
+    }
+
+    private static List<String> getColumnValues(String csvFile, int column) throws IOException {
+        List<String> result = new ArrayList<>();
+        Reader in = new FileReader(csvFile);
+        Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(in);
+        for (CSVRecord record : records) {
+            if (column < record.size() && !record.get(column).trim().isEmpty()) {
+                result.add(record.get(column));
+            }
+        }
+        return result;
+    }
+
+    private static List<List<String>> readCsv(String name) throws IOException {
+        Reader in = new FileReader(name);
+        Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(in);
+        for (CSVRecord record : records) {
+            for (String column : record) {
+                System.out.print(column);
+                System.out.print(" | ");
+            }
+            System.out.println();
+        }
     }
 
     public static void main(String... args) {
         try {
-            List<String> hostList = loadHostList();
-            List<IpTester> ipList = loadIpList(hostList);
+            if (args.length < 2) {
+                System.out.println("use com.jetradar.monkeyaware.MonkeyAware \\mode=[trigger|report] path/to/file.csv");
+                System.exit(1);
+            }
+            boolean isTriggerMode = args[0].equals("\\mode=trigger");
+
+            StringBuilder file = new StringBuilder();
+            for (int i = 1; i < args.length; i++) file.append(args[i]);
+
+            List<String> hostList = loadHostList(file.toString());
+            List<IpTester> ipList = loadIpList(file.toString());
+
+            AtomicInteger counter = new AtomicInteger(0);
             readBlocked((ips, hosts, pages, who, act, date) -> {
-                if (testIps(ipList, ips) || testHosts(hostList, hosts))
-                    report(ips, hosts, pages, who, act, date);
+                if (testIps(ipList, ips) || testHosts(hostList, hosts)) {
+                    if (isTriggerMode) {
+                        counter.incrementAndGet();
+                    } else
+                        report(ips, hosts, pages, who, act, date);
+                }
             });
+
+            if (isTriggerMode)
+                System.out.print(counter.get());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -151,15 +190,15 @@ public class MonkeyAware {
 
         IpTester(String ip) {
             this.ip = ip;
-            if(ip.contains("/")){
+            if (ip.contains("/")) {
                 subnet = new SubnetUtils(ip).getInfo();
             }
         }
 
-        boolean test(String ip){
-            if(subnet != null){
+        boolean test(String ip) {
+            if (subnet != null) {
                 return subnet.isInRange(ip);
-            }else{
+            } else {
                 return ip.equals(this.ip);
             }
         }
