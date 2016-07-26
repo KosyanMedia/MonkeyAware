@@ -16,5 +16,5 @@ java "target/monkey-aware-1.0-jar-with-dependencies.jar" com.jetradar.monkeyawar
 ```
 
 
-В mode=trigger выдаёт количество найденых блокировок. В норме - 0.
-В mode=report выдаёт репорт по найденым блокировкам.
+* mode=trigger выдаёт количество найденых блокировок. В норме - 0.
+* mode=report выдаёт репорт по найденым блокировкам.
