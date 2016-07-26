@@ -141,18 +141,6 @@ public class MonkeyAware {
         return result;
     }
 
-    private static List<List<String>> readCsv(String name) throws IOException {
-        Reader in = new FileReader(name);
-        Iterable<CSVRecord> records = CSVFormat.RFC4180.parse(in);
-        for (CSVRecord record : records) {
-            for (String column : record) {
-                System.out.print(column);
-                System.out.print(" | ");
-            }
-            System.out.println();
-        }
-    }
-
     public static void main(String... args) {
         try {
             if (args.length < 2) {
